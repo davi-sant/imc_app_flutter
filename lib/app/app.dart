@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:imc_app_flutter/utils/message_validation.dart';
+import 'package:imc_app_flutter/utils/regex_validation.dart';
 import 'package:imc_app_flutter/utils/texts_controller.dart';
 import 'package:imc_app_flutter/widgets/form_widget.dart';
 
 class App extends StatefulWidget {
-  App({Key? key}) : super(key: key);
+  const App({Key? key}) : super(key: key);
 
   @override
   State<App> createState() => _AppState();
 }
 
 class _AppState extends State<App> {
-  String? msg;
+  String? msg = MessageValidation.msgField;
+
+  @override
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -39,46 +43,79 @@ class _AppState extends State<App> {
                   colorTextButton: Colors.black,
                   fontSizeTextBtton: 14,
                   press: () {
-                    String altura = TextsController.altura.text;
-                    String peso = TextsController.peso.text;
-
-                    setState(() {
-                      altura.isEmpty & peso.isEmpty
-                          ? print(msg = "Por favor preencha todos os campos")
-                          : isNumeric(altura) & isNumeric(peso) == false
-                              ? print(msg = "Por favor digite um numero")
-                              : msg = _calcImc().toString();
-                      _resettext();
-                    });
+                    _validateField();
+                    _resettext();
                   },
                 ),
               ),
             ),
-            Text(msg ?? "info"),
+            Text(
+              msg ?? "info",
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
     );
   }
 
-  RegExp _numeric = RegExp(r'^-?[0-9]+$');
-
-  RegExp _alpha = RegExp(r'^[a-zA-Z]+$');
-
   _resettext() {
     TextsController.altura.text = "";
     TextsController.peso.text = "";
-    String isEmptyText = "Por favor preencha todos os campos";
+  }
+
+  _validateField() {
+    String altura = TextsController.altura.text;
+    String peso = TextsController.peso.text;
+    String replaceAltura =
+        TextsController.altura.text.replaceAll(",", "").replaceAll(".", "");
+    String replacePeso =
+        TextsController.peso.text.replaceAll(",", "").replaceAll(".", "");
+
+    setState(() {
+      if (altura.isEmpty && peso.isEmpty) {
+        msg = "Por favor preencha todos os campos !!";
+      } else if (isNumeric(replaceAltura) & isNumeric(replacePeso) == false) {
+        msg =
+            "Atenção!! Os valores  indicados não correspondem há um tipo numerico por favor preencha corretamente";
+        return;
+      } else {
+        msg = _calcImc().toString();
+        return;
+      }
+    });
   }
 
   _calcImc() {
-    String altura = TextsController.altura.text;
-    String peso = TextsController.peso.text;
-    double calc = double.parse(altura) + double.parse(peso);
-    return calc;
+    String replaceAltura = TextsController.altura.text.replaceAll(",", ".");
+    String replacePeso = TextsController.peso.text.replaceAll(",", ".");
+    num alturaToDouble = num.parse(replaceAltura);
+    num pesoToDouble = num.parse(replacePeso);
+    num baseCalc = pesoToDouble / (alturaToDouble * alturaToDouble);
+
+    setState(() {
+      if (baseCalc <= 18.5) {
+        msg =
+            "Atenção!! seu IMC ${(baseCalc.toStringAsPrecision(3))} está abaixo da media recomendada - MAGREZA - (0)";
+      } else if (baseCalc >= 18.5 && baseCalc < 24.9) {
+        msg =
+            "Atenção!! seu IMC - ${baseCalc.toStringAsPrecision(3)} está na media recomendada - NORMAL";
+      } else if (baseCalc >= 25.0 && baseCalc < 29.9) {
+        msg =
+            "Atenção!! seu IMC - ${baseCalc.toStringAsPrecision(3)} está acima da media recomendada - OBSIDADE - (I)";
+      } else if (baseCalc >= 30.0 && baseCalc < 39.9) {
+        msg =
+            "Atenção!! seu IMC - ${baseCalc.toStringAsPrecision(3)} está acima da media recomendada - OBSIDADE - (II)";
+      } else if (baseCalc > 39.9) {
+        msg =
+            "Atenção!! seu IMC - ${baseCalc.toStringAsPrecision(3)} está acima da media recomendada - OBSIDADE - (III)";
+      }
+    });
+    String result = msg!;
+    return result;
   }
 
   bool isNumeric(String str) {
-    return _numeric.hasMatch(str);
+    return RegexValidation.float.hasMatch(str);
   }
 }
